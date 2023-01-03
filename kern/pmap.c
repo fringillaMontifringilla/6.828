@@ -344,8 +344,21 @@ page_decref(struct PageInfo* pp)
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
-	// Fill this function in
-	return NULL;
+    pde_t pde = pgdir[PDX(va)];
+    pte_t* ptdir = NULL;
+    if(!(pde & PTE_P)){
+        if(create){
+            struct PageInfo* pte_page = page_alloc(ALLOC_ZERO);
+            if(!pte_page)
+                return NULL;
+            pte_page -> pp_ref += 1;
+            pgdir[PDX(va)] = (PGNUM(page2pa(pte_page)) << PGSHIFT) | PTE_P | PTE_W | PTE_U;
+            ptdir = (pte_t*)(PGNUM(page2pa(pte_page)) << PGSHIFT);
+        }else
+            return NULL;
+    }else
+        ptdir = (pte_t*)(PGNUM(pde) << PGSHIFT);
+    return KADDR(ptdir + PTX(va));
 }
 
 //
@@ -362,7 +375,10 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
-	// Fill this function in
+    for(size_t i = 0; i < size; i += PGSIZE){
+        pte_t* pte = pgdir_walk(pgdir, (void*)(va + i), 1);
+        *pte = (PGNUM(pa + i) << PGSIZE) | perm | PTE_P;
+    }
 }
 
 //
@@ -383,6 +399,9 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 // frequently leads to subtle bugs; there's an elegant way to handle
 // everything in one code path.
 //
+// pp -> pp_ref = 1,
+// page_remove() => pp -> pp_ref = 0(free, corrupted)
+//
 // RETURNS:
 //   0 on success
 //   -E_NO_MEM, if page table couldn't be allocated
@@ -393,7 +412,13 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
-	// Fill this function in
+    pte_t* pte = pgdir_walk(pgdir, va, 1);
+    if(!pte)
+        return -E_NO_MEM;
+    //increment ref first, decrement if failed, so pp_ref will never be 0.
+    pp -> pp_ref += 1;
+    page_remove(pgdir, va);
+    *pte = (PGNUM(page2pa(pp)) << PGSHIFT) | perm | PTE_P;
 	return 0;
 }
 
@@ -411,8 +436,20 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
-	// Fill this function in
-	return NULL;
+    pte_t* pte = pgdir_walk(pgdir, va, 0);
+    if(!pte){
+        if(pte_store)
+            *pte_store = 0;
+        return NULL;
+    }
+    if(!(*pte & PTE_P)){
+        if(pte_store)
+            *pte_store = 0;
+        return NULL;
+    }
+    if(pte_store)
+        *pte_store = pte;
+    return pa2page(*pte & (~0xFFF));
 }
 
 //
@@ -433,7 +470,13 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 void
 page_remove(pde_t *pgdir, void *va)
 {
-	// Fill this function in
+    pte_t* pte_p;
+    struct PageInfo* page = page_lookup(pgdir, va, &pte_p);
+    if(!page)
+        return;
+    *pte_p = 0;
+    page_decref(page);
+    tlb_invalidate(pgdir, va);
 }
 
 //
