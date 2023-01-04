@@ -115,7 +115,12 @@ void
 env_init(void)
 {
 	// Set up envs array
-	// LAB 3: Your code here.
+    for(int i = NENV;i >= 0;i--){
+        envs[i].env_id = 0;
+        envs[i].env_status = ENV_FREE;
+        envs[i].env_link = env_free_list;
+        env_free_list = &envs[i];
+    }
 
 	// Per-CPU part of the initialization
 	env_init_percpu();
@@ -178,8 +183,10 @@ env_setup_vm(struct Env *e)
 	//	pp_ref for env_free to work correctly.
 	//    - The functions in kern/pmap.h are handy.
 
-	// LAB 3: Your code here.
-
+    e -> env_pgdir = page2kva(p);
+    p -> pp_ref += 1;
+    for(int i = PDX(UTOP);i < NPDENTRIES;i++)
+        e -> env_pgdir[i] = kern_pgdir[i];
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
 	e->env_pgdir[PDX(UVPT)] = PADDR(e->env_pgdir) | PTE_P | PTE_U;
@@ -260,13 +267,22 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 static void
 region_alloc(struct Env *e, void *va, size_t len)
 {
-	// LAB 3: Your code here.
 	// (But only if you need it for load_icode.)
 	//
 	// Hint: It is easier to use region_alloc if the caller can pass
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
+    uintptr_t start = (uintptr_t)ROUNDDOWN(va, PGSIZE);
+    uintptr_t end = (uintptr_t)ROUNDUP(va + len, PGSIZE);
+    size_t i = start;
+    for(;i < end;i += PGSIZE){
+        struct PageInfo* page = page_alloc(0);
+        if(!page)
+            panic("allocate page fail for env %d, va:%08x, len:%u\n",
+                    e -> env_id, va, len);
+        page_insert(e -> env_pgdir, page, i, PTE_W|PTE_U);
+    }
 }
 
 //
@@ -322,12 +338,30 @@ load_icode(struct Env *e, uint8_t *binary)
 	//  to make sure that the environment starts executing there.
 	//  What?  (See env_run() and env_pop_tf() below.)
 
-	// LAB 3: Your code here.
-
+    struct Elf elf_header;
+    memcpy(&elf_header, binary, sizeof(struct Elf));
+    if(elf_header.e_magic != ELF_MAGIC){
+        panic("elf magic number does not match, expected:%08x, read:%08x\n",
+                ELF_MAGIC,
+                elf_header.e_magic);
+    }
+    void* prog_start = binary + elf_header.e_phoff;
+    struct Proghdr prog_header;
+    lcr3(PADDR(e->env_pgdir));
+    for(int i = 0;i < elf_header.e_phnum;i++){
+        memcpy(&prog_header, prog_start + i * elf_header.e_phentsize, elf_header.e_phentsize);
+        if(prog_header.p_type == ELF_PROG_LOAD){
+            region_alloc(e, prog_header.p_va, prog_header.p_memsz);
+            memset(prog_header.p_va, 0, prog_header.p_memsz);
+            memcpy(prog_header.p_va, binary + prog_header.p_offset, prog_header.p_filesz);
+        }
+    }
+    e -> env_tf.tf_eip = elf_header.e_entry;
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
 
-	// LAB 3: Your code here.
+    region_alloc(e, USTACKTOP-PGSIZE, PGSIZE);
+    lcr3(PADDR(kern_pgdir));
 }
 
 //
@@ -340,7 +374,13 @@ load_icode(struct Env *e, uint8_t *binary)
 void
 env_create(uint8_t *binary, enum EnvType type)
 {
-	// LAB 3: Your code here.
+    struct Env* e;
+    if(!env_alloc(&e, type)){
+        load_icode(e, binary);
+        e -> env_type = type;
+        e -> env_parent_id = 0;
+    } else
+        panic("create env failed\n");
 }
 
 //
@@ -456,8 +496,13 @@ env_run(struct Env *e)
 	//	and make sure you have set the relevant parts of
 	//	e->env_tf to sensible values.
 
-	// LAB 3: Your code here.
-
-	panic("env_run not yet implemented");
+    if(e == curenv)
+        return;
+    if(curenv && curenv -> env_status == ENV_RUNNING)
+        curenv -> env_status = ENV_RUNNABLE;
+    curenv = e;
+    curenv -> env_status = ENV_RUNNING;
+    curenv -> env_runs += 1;
+    lcr3(PADDR(curenv -> env_pgdir));
+    env_pop_tf(&(curenv -> env_tf));
 }
-
