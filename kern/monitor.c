@@ -10,6 +10,7 @@
 #include <kern/console.h>
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
+#include <kern/pmap.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
@@ -24,7 +25,8 @@ struct Command {
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
-    { "backtrace", "calling backtrace", mon_backtrace }
+    { "backtrace", "calling backtrace", mon_backtrace },
+    { "memmap", "show memory mapping", mon_memmap }
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -81,6 +83,21 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+int mon_memmap(int argc, char** argv, struct Trapframe *tf){
+    cprintf("Memory Mapping:\n");
+    cprintf("Virt\tPhys\tPerm\n");
+    for(size_t i = 0;i <= 0xffffffff-PGSIZE+1;i+=PGSIZE){
+        pte_t* pte = pgdir_walk(kern_pgdir, (void*)i, 0);
+        if(!pte || !(*pte & PTE_P))
+            continue;
+        cprintf("0x%08x-0x%08x\t0x%08x-0x%08x\t%c%c%c\n",
+                i, i + 0x1000,
+                PTE_ADDR(*pte), PTE_ADDR(*pte) + 0x1000,
+                (*pte & PTE_U) ? 'U' : '-',
+                'R',
+                (*pte & PTE_W) ? 'W' : '-');
+    }
+}
 
 
 /***** Kernel monitor command interpreter *****/
