@@ -58,17 +58,44 @@ static const char *trapname(int trapno)
 	return "(unknown trap)";
 }
 
-
+#define _setup_gate(name, num, istrap, sel, dpl) \
+    void name(); \
+    SETGATE(idt[num], istrap, sel, name, dpl)
+#define _setup_trap_gate(name, num, sel, dpl) \
+    _setup_gate(name, num, 1, sel, dpl)
+#define _setup_int_gate(name, num, sel, dpl) \
+    _setup_gate(name, num, 0, sel, dpl)
 void
 trap_init(void)
 {
 	extern struct Segdesc gdt[];
 
-	// LAB 3: Your code here.
+    _setup_trap_gate(t_divide, T_DIVIDE, GD_KT, 0);
+    _setup_trap_gate(t_debug, T_DEBUG, GD_KT, 0);
+    _setup_trap_gate(t_nmi, T_NMI, GD_KT, 0);
+    _setup_trap_gate(t_brkpt, T_BRKPT, GD_KT, 3);
+    _setup_trap_gate(t_oflow, T_OFLOW, GD_KT, 0);
+    _setup_trap_gate(t_bound, T_BOUND, GD_KT, 0);
+    _setup_trap_gate(t_illop, T_ILLOP, GD_KT, 0);
+    _setup_trap_gate(t_device, T_DEVICE, GD_KT, 0);
+    _setup_trap_gate(t_dblflt, T_DBLFLT, GD_KT, 0);
+    _setup_trap_gate(t_tss, T_TSS, GD_KT, 0);
+    _setup_trap_gate(t_segnp, T_SEGNP, GD_KT, 0);
+    _setup_trap_gate(t_stack, T_STACK, GD_KT, 0);
+    _setup_trap_gate(t_gpflt, T_GPFLT, GD_KT, 0);
+    _setup_trap_gate(t_pgflt, T_PGFLT, GD_KT, 0);
+    _setup_trap_gate(t_fperr, T_FPERR, GD_KT, 0);
+    _setup_trap_gate(t_align, T_ALIGN, GD_KT, 0);
+    _setup_trap_gate(t_mchk, T_MCHK, GD_KT, 0);
+    _setup_trap_gate(t_simderr, T_SIMDERR, GD_KT, 0);
+    _setup_int_gate(t_syscall, T_SYSCALL, GD_KT, 3);
 
-	// Per-CPU setup 
+	// Per-CPU setup
 	trap_init_percpu();
 }
+#undef _setup_gate
+#undef _setup_trap_gate
+#undef _setup_int_gate
 
 // Initialize and load the per-CPU TSS and IDT
 void
