@@ -27,7 +27,8 @@ static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
     { "backtrace", "calling backtrace", mon_backtrace },
-    { "memmap", "show memory mapping", mon_memmap }
+    { "memmap", "show memory mapping", mon_memmap },
+    { "continue", "continue(debug mode) the execution or exit(normal mode) the monitor", mon_continue }
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -100,6 +101,9 @@ int mon_memmap(int argc, char** argv, struct Trapframe *tf){
     }
 }
 
+int mon_continue(int argc, char** argv, struct Trapframe *tf){
+    return -1;
+}
 
 /***** Kernel monitor command interpreter *****/
 
