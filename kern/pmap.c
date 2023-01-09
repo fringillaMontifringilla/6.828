@@ -272,8 +272,9 @@ mem_init_mp(void)
 	//             Known as a "guard page".
 	//     Permissions: kernel RW, user NONE
 	//
-	// LAB 4: Your code here:
-
+    for(int i = 0;i < NCPU;i++)
+        boot_map_region(kern_pgdir, KSTACKTOP - (i+1)*KSTKSIZE - i*KSTKGAP,
+                        KSTKSIZE, PADDR(percpu_kstacks[i]), PTE_W);
 }
 
 // --------------------------------------------------------------
@@ -291,7 +292,6 @@ mem_init_mp(void)
 void
 page_init(void)
 {
-	// LAB 4:
 	// Change your code to mark the physical page at MPENTRY_PADDR
 	// as in use
 
@@ -316,6 +316,11 @@ page_init(void)
     pages[0].pp_ref = 1;
     pages[0].pp_link = NULL;
     for(i = 1;i < npages_basemem;i++){
+        if(i * PGSIZE == MPENTRY_PADDR){
+            pages[i].pp_ref = 1;
+            pages[i].pp_link = NULL;
+            continue;
+        }
         pages[i].pp_ref = 0;
         pages[i].pp_link = page_free_list;
         page_free_list = &pages[i];
@@ -583,8 +588,13 @@ mmio_map_region(physaddr_t pa, size_t size)
 	//
 	// Hint: The staff solution uses boot_map_region.
 	//
-	// Your code here:
-	panic("mmio_map_region not implemented");
+    size_t real_size = (size_t)ROUNDUP((char*)size, PGSIZE);
+    if(base + real_size > MMIOLIM)
+        panic("mmio overflow, remain:%08x, request:%08x\n", MMIOLIM-base, real_size);
+    boot_map_region(kern_pgdir, base, real_size, pa, PTE_PCD|PTE_PWT|PTE_W);
+    void* start = (void*)base;
+    base += real_size;
+    return start;
 }
 
 static uintptr_t user_mem_check_addr;

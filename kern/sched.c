@@ -27,8 +27,24 @@ sched_yield(void)
 	// another CPU (env_status == ENV_RUNNING). If there are
 	// no runnable environments, simply drop through to the code
 	// below to halt the cpu.
-
-	// LAB 4: Your code here.
+    struct Env* prev = thiscpu -> cpu_env;
+    int i = 0;
+    for(;i < NENV;i++)
+        if(&envs[i] == prev)
+            break;
+    i = (i == NENV)?-1:i;
+    int cursor = i + 1;
+    while(cursor != i){
+        if(i == -1)
+            i = 0;
+        if(envs[cursor].env_status == ENV_RUNNABLE){
+            envs[cursor].env_status = ENV_RUNNING;
+            if(prev)
+                prev -> env_status = ENV_RUNNABLE;
+            env_run(&envs[cursor]);
+        }
+        cursor = (cursor + 1) % NENV;
+    }
 
 	// sched_halt never returns
 	sched_halt();
@@ -54,7 +70,9 @@ sched_halt(void)
 		cprintf("No runnable environments in the system!\n");
 		while (1)
 			monitor(NULL);
-	}
+	}else{
+        cprintf("env %08x is running\n", envs[i].env_id);
+    }
 
 	// Mark that no environment is running on this CPU
 	curenv = NULL;

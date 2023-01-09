@@ -148,7 +148,7 @@ CPUS ?= 1
 QEMUOPTS = -drive file=$(OBJDIR)/kern/kernel.img,index=0,media=disk,format=raw -serial mon:stdio -gdb tcp::$(GDBPORT)
 QEMUOPTS += $(shell if $(QEMU) -nographic -help | grep -q '^-D '; then echo '-D qemu.log'; fi)
 IMAGES = $(OBJDIR)/kern/kernel.img
-QEMUOPTS += -smp $(CPUS)
+QEMUOPTS += -smp $(CPUS),cores=1,threads=1
 QEMUOPTS += $(QEMUEXTRA)
 
 .gdbinit: .gdbinit.tmpl
