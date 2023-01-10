@@ -63,20 +63,42 @@ _pgfault_upcall:
 	// registers are available for intermediate calculations.  You
 	// may find that you have to rearrange your code in non-obvious
 	// ways as registers become unavailable as scratch space.
-	//
-	// LAB 4: Your code here.
-
 	// Restore the trap-time registers.  After you do this, you
 	// can no longer modify any general-purpose registers.
-	// LAB 4: Your code here.
-
 	// Restore eflags from the stack.  After you do this, you can
 	// no longer use arithmetic operations or anything else that
 	// modifies eflags.
-	// LAB 4: Your code here.
-
 	// Switch back to the adjusted trap-time stack.
-	// LAB 4: Your code here.
-
 	// Return to re-execute the instruction that faulted.
-	// LAB 4: Your code here.
+
+    //target:
+    //1.restore trap-time eip for final return
+    //2.restore registers esp(forbid code exec) and eflags(forbid arithmetic ops)
+    //3.restore general regs(forbid usage)
+    //4.leave current trap frame
+    //5.return to previos frame or user env
+
+    //phase1: restore eip to the reversed empty word
+    //          or 32-bit below user env's esp
+    movl 0x30(%esp), %eax
+    subl $4, %eax
+    movl 0x28(%esp), %ecx
+    movl %ecx, (%eax)
+    movl 0x30(%esp), %ecx
+    subl $4, %ecx
+    movl %ecx, 0x30(%esp)
+
+    //phase2:restore as usual
+    //skip va and errno
+    addl $8, %esp
+    //restore general registers
+    popa
+    //skip eip
+    addl $4, %esp
+    //now eflags
+    popf
+    //the final is esp
+    pop %esp
+
+    //phase3:ret to prev frame
+    ret

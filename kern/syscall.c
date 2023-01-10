@@ -22,8 +22,7 @@ sys_cputs(const char *s, size_t len)
 	// Check that the user has permission to read memory [s, s+len).
 	// Destroy the environment if not.
 
-    if(user_mem_check(curenv, (const void*)s, len, PTE_U) < 0)
-        env_destroy(curenv);
+    user_mem_assert(curenv, (const void*)s, len, PTE_U);
 
 	// Print the string supplied by the user.
 	cprintf("%.*s", len, s);
@@ -131,8 +130,11 @@ sys_env_set_status(envid_t envid, int status)
 static int
 sys_env_set_pgfault_upcall(envid_t envid, void *func)
 {
-	// LAB 4: Your code here.
-	panic("sys_env_set_pgfault_upcall not implemented");
+    struct Env* env;
+    if(envid2env(envid, &env, 1) < 0)
+        return -E_BAD_ENV;
+    env -> env_pgfault_upcall = func;
+    return 0;
 }
 
 // Allocate a page of memory and map it at 'va' with permission
@@ -340,6 +342,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
         return sys_page_map((int)a1, (void*)a2, (int)a3, (void*)a4, (int)a5);
     case SYS_page_unmap:
         return sys_page_unmap((int)a1, (void*)a2);
+    case SYS_env_set_pgfault_upcall:
+        return sys_env_set_pgfault_upcall((envid_t)a1, (void*)a2);
 	default:
 		return -E_INVAL;
 	}
