@@ -46,6 +46,8 @@ sched_yield(void)
         cursor = (cursor + 1) % NENV;
     }
 
+    if(prev && prev -> env_status == ENV_RUNNING)
+        env_run(prev);
 	// sched_halt never returns
 	sched_halt();
 }
@@ -70,9 +72,7 @@ sched_halt(void)
 		cprintf("No runnable environments in the system!\n");
 		while (1)
 			monitor(NULL);
-	}else{
-        cprintf("env %08x is running\n", envs[i].env_id);
-    }
+	}
 
 	// Mark that no environment is running on this CPU
 	curenv = NULL;
