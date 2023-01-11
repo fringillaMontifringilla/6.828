@@ -89,13 +89,29 @@ trap_init(void)
     _setup_trap_gate(t_tss, T_TSS, GD_KT, 0);
     _setup_trap_gate(t_segnp, T_SEGNP, GD_KT, 0);
     _setup_trap_gate(t_stack, T_STACK, GD_KT, 0);
-    _setup_trap_gate(t_gpflt, T_GPFLT, GD_KT, 0);
-    _setup_trap_gate(t_pgflt, T_PGFLT, GD_KT, 0);
+    _setup_int_gate(t_gpflt, T_GPFLT, GD_KT, 0);
+    _setup_int_gate(t_pgflt, T_PGFLT, GD_KT, 0);
     _setup_trap_gate(t_fperr, T_FPERR, GD_KT, 0);
     _setup_trap_gate(t_align, T_ALIGN, GD_KT, 0);
     _setup_trap_gate(t_mchk, T_MCHK, GD_KT, 0);
     _setup_trap_gate(t_simderr, T_SIMDERR, GD_KT, 0);
     _setup_int_gate(t_syscall, T_SYSCALL, GD_KT, 3);
+    _setup_int_gate(t_irq0, IRQ_OFFSET, GD_KT, 0);
+    _setup_int_gate(t_irq1, IRQ_OFFSET+1, GD_KT, 0);
+    _setup_int_gate(t_irq2, IRQ_OFFSET+2, GD_KT, 0);
+    _setup_int_gate(t_irq3, IRQ_OFFSET+3, GD_KT, 0);
+    _setup_int_gate(t_irq4, IRQ_OFFSET+4, GD_KT, 0);
+    _setup_int_gate(t_irq5, IRQ_OFFSET+5, GD_KT, 0);
+    _setup_int_gate(t_irq6, IRQ_OFFSET+6, GD_KT, 0);
+    _setup_int_gate(t_irq7, IRQ_OFFSET+7, GD_KT, 0);
+    _setup_int_gate(t_irq8, IRQ_OFFSET+8, GD_KT, 0);
+    _setup_int_gate(t_irq9, IRQ_OFFSET+9, GD_KT, 0);
+    _setup_int_gate(t_irq10, IRQ_OFFSET+10, GD_KT, 0);
+    _setup_int_gate(t_irq11, IRQ_OFFSET+11, GD_KT, 0);
+    _setup_int_gate(t_irq12, IRQ_OFFSET+12, GD_KT, 0);
+    _setup_int_gate(t_irq13, IRQ_OFFSET+13, GD_KT, 0);
+    _setup_int_gate(t_irq14, IRQ_OFFSET+14, GD_KT, 0);
+    _setup_int_gate(t_irq15, IRQ_OFFSET+15, GD_KT, 0);
 
 	// Per-CPU setup
 	trap_init_percpu();
