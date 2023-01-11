@@ -22,9 +22,21 @@
 int32_t
 ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
 {
-	// LAB 4: Your code here.
-	panic("ipc_recv not implemented");
-	return 0;
+    if(!pg)
+        pg = UTOP;
+    envid_t envid = 0;
+    int perm = 0;
+    int value;
+    if(value=sys_ipc_recv(pg), !value){
+        envid = thisenv -> env_ipc_from;
+        perm = thisenv -> env_ipc_perm;
+        value = thisenv -> env_ipc_value;
+    }
+    if(from_env_store)
+        *from_env_store = envid;
+    if(perm_store)
+        *perm_store = perm;
+    return value;
 }
 
 // Send 'val' (and 'pg' with 'perm', if 'pg' is nonnull) to 'toenv'.
@@ -38,8 +50,27 @@ ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
 void
 ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
 {
-	// LAB 4: Your code here.
-	panic("ipc_send not implemented");
+    if(!pg)
+        pg = UTOP;
+    int value;
+    do{
+        value = sys_ipc_try_send(to_env, val, pg, perm);
+        if(!value)
+            return;
+        if(value != -E_IPC_NOT_RECV)
+            panic("ipc send panic, %08x to %08x, err:%d\n, val:%08x, page:%s(%08x), perm:%s(%08x[%c%cr%c%c%c])\n",
+                    thisenv -> env_id, to_env,
+                    value,
+                    val,
+                    (pg == UTOP)?"NOT ENABLED":"ENABLED", pg,
+                    (pg == UTOP)?"NOT ENABLED":"ENABLED", perm,
+                    (perm & PTE_U)?'u':'-',
+                    (perm & PTE_W)?'w':'-',
+                    (perm & PTE_AVAIL)?'a':'-',
+                    (perm & PTE_P)?'p':'-',
+                    (perm & (~PTE_U) & (~PTE_W) & (~PTE_AVAIL) & (~PTE_P))?'o':'-');
+        sys_yield();
+    }while(value);
 }
 
 // Find the first environment of the given type.  We'll use this to

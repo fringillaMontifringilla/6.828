@@ -39,7 +39,7 @@ sched_yield(void)
             i = 0;
         if(envs[cursor].env_status == ENV_RUNNABLE){
             envs[cursor].env_status = ENV_RUNNING;
-            if(prev)
+            if(prev && prev -> env_status == ENV_RUNNING)
                 prev -> env_status = ENV_RUNNABLE;
             env_run(&envs[cursor]);
         }

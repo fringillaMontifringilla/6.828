@@ -80,7 +80,7 @@ trap_init(void)
     _setup_trap_gate(t_divide, T_DIVIDE, GD_KT, 0);
     _setup_trap_gate(t_debug, T_DEBUG, GD_KT, 0);
     _setup_trap_gate(t_nmi, T_NMI, GD_KT, 0);
-    _setup_trap_gate(t_brkpt, T_BRKPT, GD_KT, 3);
+    _setup_int_gate(t_brkpt, T_BRKPT, GD_KT, 3);
     _setup_trap_gate(t_oflow, T_OFLOW, GD_KT, 0);
     _setup_trap_gate(t_bound, T_BOUND, GD_KT, 0);
     _setup_trap_gate(t_illop, T_ILLOP, GD_KT, 0);

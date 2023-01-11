@@ -291,8 +291,62 @@ sys_page_unmap(envid_t envid, void *va)
 static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
-	// LAB 4: Your code here.
-	panic("sys_ipc_try_send not implemented");
+    //first check target env
+    struct Env* dstenv;
+    if(envid2env(envid, &dstenv, 0) < 0)
+        return -E_BAD_ENV;
+
+    //check dstenv's status
+    if(!dstenv -> env_ipc_recving)
+        return -E_IPC_NOT_RECV;
+
+    //check srcva itself
+    int send_page = 0;
+    if((uint32_t)srcva < UTOP){
+        //ready to send
+        if((uint32_t)srcva % PGSIZE)
+            //not page-aligned
+            return -E_INVAL;
+        //check src page-mapping
+        pte_t* pte;
+        struct PageInfo* page = page_lookup(curenv -> env_pgdir, srcva, &pte);
+        if(!page)
+            //not mapped
+            return -E_INVAL;
+        if((perm & PTE_W) && (!(*pte & PTE_W)))
+            //map RO page
+            return -E_INVAL;
+        //check perm itself
+        if((perm & (PTE_U|PTE_P)) != (PTE_U|PTE_P))
+            //perm1 failed
+            return -E_INVAL;
+        if(perm & (~PTE_W) & (~PTE_U) & (~PTE_P) & (~PTE_AVAIL))
+            //perm2 failed
+            return -E_INVAL;
+        //srcva itself passed, check for dstva
+        if((uint32_t)(dstenv -> env_ipc_dstva) < UTOP)
+            //dst request page mapping
+            send_page = 1;
+    }
+
+    //install data to dst
+    if(send_page){
+        struct PageInfo* page = page_lookup(curenv -> env_pgdir, srcva, 0);
+        assert(page);
+        if(page_insert(dstenv -> env_pgdir, page, dstenv -> env_ipc_dstva, perm) < 0)
+            return -E_NO_MEM;
+    }
+    //page mapped, continue installing
+    dstenv -> env_ipc_value = value;
+    dstenv -> env_ipc_from = curenv -> env_id;
+    dstenv -> env_ipc_perm = perm;
+    //responsible for receiver's return value
+    dstenv -> env_tf.tf_regs.reg_eax = 0;
+    dstenv -> env_ipc_recving = 0;
+
+    //enable scheduling
+    dstenv -> env_status = ENV_RUNNABLE;
+    return 0;
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -309,9 +363,26 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 static int
 sys_ipc_recv(void *dstva)
 {
-	// LAB 4: Your code here.
-	panic("sys_ipc_recv not implemented");
-	return 0;
+    //process dstva
+    if((uint32_t)dstva < UTOP && (uint32_t)dstva % PGSIZE)
+        return -E_INVAL;
+
+    //install data, as syscall is marked as interrupt, it cam never be interrupted again
+    curenv -> env_ipc_dstva = dstva;
+    curenv -> env_ipc_recving = 1;
+    curenv -> env_status = ENV_NOT_RUNNABLE;
+    curenv -> env_ipc_perm = 0;
+    curenv -> env_ipc_from = curenv -> env_id;
+
+    //waiting for message, yield the CPU
+    sched_yield();
+
+    //Now message received, but it is impossible to reach here.
+    //sched_yield() will call env_run(), finally execute 'iret'.
+    //but the stack's is when it calls syscall, so the program will
+    //return to the library call-point directly.
+    //the return value need to be set by sender
+    return 0;
 }
 
 // Dispatches to the correct kernel function, passing the arguments.
@@ -347,6 +418,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
     case SYS_yield:
         sched_yield();
         return 0;
+    case SYS_ipc_try_send:
+        return sys_ipc_try_send((int)a1, (int)a2, (void*)a3, (unsigned int)a4);
+    case SYS_ipc_recv:
+        return sys_ipc_recv((void*)a1);
 	default:
 		return -E_INVAL;
 	}
