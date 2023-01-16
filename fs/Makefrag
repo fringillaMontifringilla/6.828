@@ -6,6 +6,7 @@ FSOFILES := 		$(OBJDIR)/fs/ide.o \
 			$(OBJDIR)/fs/fs.o \
 			$(OBJDIR)/fs/serv.o \
 			$(OBJDIR)/fs/test.o \
+            $(OBJDIR)/fs/meta.o \
 
 USERAPPS := 		$(OBJDIR)/user/init
 
