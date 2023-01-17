@@ -62,6 +62,8 @@ duppage(envid_t envid, unsigned pn)
 	int r;
     pte_t pte = uvpt[pn];
     int perm = PTE_P|PTE_U;
+    if(pte & PTE_SHARE)
+        return sys_page_map(0, pn*PGSIZE, envid, pn*PGSIZE, pte & PTE_SYSCALL);
     if((pte & PTE_W) || (pte & PTE_COW))
         perm |= PTE_COW;
     r = sys_page_map(0, pn*PGSIZE, envid, pn*PGSIZE, perm);
