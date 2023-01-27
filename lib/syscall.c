@@ -122,3 +122,7 @@ sys_time_msec(void)
 {
 	return (unsigned int) syscall(SYS_time_msec, 0, 0, 0, 0, 0, 0);
 }
+
+int sys_nic_transmit(const void* packet, int size){
+    return syscall(SYS_nic_transmit, 1, packet, size, 0, 0, 0);
+}

@@ -76,10 +76,10 @@ int e1000_82540em_attach(struct pci_func* pcif){
 
 int e1000_82540em_send(const void* packet, int size){
     if(size > TX_BUFFER_SIZE)
-        return -1;
+        return -E_PACKET_TOO_BIG;
     uint32_t next = mmio[TDT];
     if(!(descs[next].status & STATUS_DD))
-        return -2;
+        return -E_TX_OVERFLOW;
     memcpy(buffers[next].buffer, packet, size);
     descs[next].addr = PADDR(&buffers[next].buffer);
     descs[next].length = size;
