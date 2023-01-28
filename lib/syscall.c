@@ -126,3 +126,7 @@ sys_time_msec(void)
 int sys_nic_transmit(const void* packet, int size){
     return syscall(SYS_nic_transmit, 1, packet, size, 0, 0, 0);
 }
+
+int sys_nic_recv(void* buf, int limit){
+    return syscall(SYS_nic_recv, 0, buf, limit, 0, 0, 0);
+}

@@ -9,8 +9,11 @@
 
 #define E_PACKET_TOO_BIG 1
 #define E_TX_OVERFLOW 2
+#define E_RX_NOT_RECV 3
+#define E_RX_LONG_PACKET 4
 
 #define PCI_82540EM_DESKTOP_ATTACH \
     { PCI_82540EM_VENDOR, PCI_82540EM_DESKTOP_DEVICE, e1000_82540em_attach }
 int e1000_82540em_attach(struct pci_func* pcif);
 int e1000_82540em_send(const void* packet, int size);
+int e1000_82540em_recv(void* buf, int limit);

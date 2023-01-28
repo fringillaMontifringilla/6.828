@@ -419,6 +419,12 @@ sys_nic_transmit(const void* packet, int size){
     return e1000_82540em_send(packet, size);
 }
 
+static int
+sys_nic_recv(void* buf, int limit){
+    user_mem_assert(curenv, buf, limit, PTE_U);
+    return e1000_82540em_recv(buf, limit);
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -462,6 +468,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
         return sys_time_msec();
     case SYS_nic_transmit:
         return sys_nic_transmit((const void*)a1, (int)a2);
+    case SYS_nic_recv:
+        return sys_nic_recv((void*)a1, (int)a2);
 	default:
 		return -E_INVAL;
 	}
