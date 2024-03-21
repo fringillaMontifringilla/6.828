@@ -1,0 +1,28 @@
+name: Makefile CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: multilib
+      run: |
+        sudo apt update
+        sudo apt install -y gcc-multilib
+
+    - name: qemu
+      run: |
+        sudo apt update
+        sudo apt install -y qemu-system-i386
+
+    - name: grade
+      run: make grade
